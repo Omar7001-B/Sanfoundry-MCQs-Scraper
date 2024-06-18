@@ -1,133 +1,169 @@
-// Remove elements that destroy the structure
-let elementsToRemove = [
-    ...document.querySelectorAll('div[style="margin:30px 0px;"]'),
-    ...document.querySelectorAll('div.sf-mobile-ads'),
-    ...document.querySelectorAll('div.sf-desktop-ads'),
-    ...document.querySelectorAll('span.collapseomatic')
-];
+// ==UserScript==
+// @name         Extract MCQs
+// @namespace    themrsami
+// @version      2.5
+// @description  Extract MCQs from the Popular Site https://www.sanfoundry.com
+// @author       You
+// @match        *://*.sanfoundry.com/*
+// @grant        GM_registerMenuCommand
+// @grant        GM_addStyle
+// @license      MIT
+// @downloadURL https://update.greasyfork.org/scripts/466623/Extract%20MCQs.user.js
+// @updateURL https://update.greasyfork.org/scripts/466623/Extract%20MCQs.meta.js
+// ==/UserScript==
 
-for (let element of elementsToRemove) {
-    if (element.parentNode) {
-        element.parentNode.removeChild(element);
-    }
-}
 
-let pTags = document.getElementsByTagName('p');
-let results = [];
+(function() {
+    'use strict';
 
-for (let i = 0; i < pTags.length; i++) {
-    let imgHref = null;
-    let aTag = pTags[i].getElementsByTagName('a')[0];
-    if (aTag) {
-        let imgTag = aTag.getElementsByTagName('img')[0];
-        if (imgTag) {
-            imgHref = imgTag.src || imgTag.getAttribute('data-src');
-            aTag.parentNode.removeChild(aTag);
+    // Add some CSS for the button
+    GM_addStyle(`
+        #extract-mcqs-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            color: white;
+            background-color: #007BFF;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 9999;
         }
-    }
+        #extract-mcqs-button:hover {
+            background-color: #0056b3;
+        }
+    `);
 
-    let startsWithNumber = /^\d/.test(pTags[i].textContent);
-    let nextSibling = pTags[i].nextElementSibling;
-    if (startsWithNumber && nextSibling && nextSibling.tagName.toLowerCase() === 'div' && nextSibling.classList.contains('collapseomatic_content')) {
-        let statementAndOptions = pTags[i].innerHTML.split('<br>');
-        let statement = statementAndOptions.shift();
-        let options = statementAndOptions.join('<br>').replace(/\n/g, '');
-        let answerAndExplanation = nextSibling.innerHTML.split('<br>');
-        let answer = answerAndExplanation.shift().replace(/\n/g, '');
-        let explanation = answerAndExplanation.join('<br>').replace(/\n/g, '');
-        results.push({
-            statement: statement,
-            imgHref: imgHref,
-            options: options,
-            answer: answer,
-            explanation: explanation
-        });
-    }
+    // Create the button
+    let button = document.createElement('button');
+    button.id = 'extract-mcqs-button';
+    button.innerText = 'Extract MCQs';
+    document.body.appendChild(button);
 
-    let nextDiv = pTags[i].nextElementSibling;
-    if (nextDiv && nextDiv.tagName.toLowerCase() === 'div' && nextDiv.classList.contains('hk1_style-wrap5')) {
-        let preTags = nextDiv.getElementsByTagName('pre');
-        if (preTags.length === 1) {
-            let pre = preTags[0];
-            let nextP = nextDiv.nextElementSibling;
-            if (nextP && nextP.tagName.toLowerCase() === 'p') {
-                let nextDiv2 = nextP.nextElementSibling;
-                if (nextDiv2 && nextDiv2.tagName.toLowerCase() === 'div' && nextDiv2.classList.contains('collapseomatic_content')) {
-                    let statement = pTags[i].textContent;
-                    let preContent = pre.innerHTML;
-                    let options = nextP.innerHTML.split('<br>').join('<br>').replace(/\n/g, '');
-                    let answerAndExplanation = nextDiv2.innerHTML.split('<br>');
-                    let answer = answerAndExplanation.shift().replace(/\n/g, '');
-                    let explanation = answerAndExplanation.join('<br>').replace(/\n/g, '');
-                    results.push({
-                        statement: statement,
-                        imgHref: imgHref,
-                        preContent: preContent,
-                        options: options,
-                        answer: answer,
-                        explanation: explanation
-                    });
+    function extractMCQs() {
+        // Remove elements that destroy the structure
+        let elementsToRemove = [
+            ...document.querySelectorAll('div[style="margin:30px 0px;"]'),
+            ...document.querySelectorAll('div.sf-mobile-ads'),
+            ...document.querySelectorAll('div.sf-desktop-ads'),
+            ...document.querySelectorAll('span.collapseomatic')
+        ];
+
+        for (let element of elementsToRemove) {
+            if (element.parentNode) {
+                element.parentNode.removeChild(element);
+            }
+        }
+
+        let pTags = document.getElementsByTagName('p');
+        let results = [];
+
+        for (let i = 0; i < pTags.length; i++) {
+            let imgHref = null;
+            let aTag = pTags[i].getElementsByTagName('a')[0];
+            if (aTag) {
+                let imgTag = aTag.getElementsByTagName('img')[0];
+                if (imgTag) {
+                    imgHref = imgTag.src || imgTag.getAttribute('data-src');
+                    aTag.parentNode.removeChild(aTag);
+                }
+            }
+
+            let startsWithNumber = /^\d/.test(pTags[i].textContent);
+            let nextSibling = pTags[i].nextElementSibling;
+            if (startsWithNumber && nextSibling && nextSibling.tagName.toLowerCase() === 'div' && nextSibling.classList.contains('collapseomatic_content')) {
+                let statementAndOptions = pTags[i].innerHTML.split('<br>');
+                let statement = statementAndOptions.shift();
+                let options = statementAndOptions.join('<br>').replace(/\n/g, '');
+                let answerAndExplanation = nextSibling.innerHTML.split('<br>');
+                let answer = answerAndExplanation.shift().replace(/\n/g, '');
+                let explanation = answerAndExplanation.join('<br>').replace(/\n/g, '');
+                results.push({
+                    statement: statement,
+                    imgHref: imgHref,
+                    options: options,
+                    answer: answer,
+                    explanation: explanation
+                });
+            }
+
+            let nextDiv = pTags[i].nextElementSibling;
+            if (nextDiv && nextDiv.tagName.toLowerCase() === 'div' && nextDiv.classList.contains('hk1_style-wrap5')) {
+                let pre = nextDiv.getElementsByTagName('pre')[0];
+                if (pre) {
+                    let nextP = nextDiv.nextElementSibling;
+                    if (nextP && nextP.tagName.toLowerCase() === 'p') {
+                        let nextDiv2 = nextP.nextElementSibling;
+                        if (nextDiv2 && nextDiv2.tagName.toLowerCase() === 'div' && nextDiv2.classList.contains('collapseomatic_content')) {
+                            let statement = pTags[i].textContent;
+                            let preContent = pre.textContent.replace(/\n/g, '');
+                            let options = nextP.innerHTML.split('<br>').join('<br>').replace(/\n/g, '');
+                            let answerAndExplanation = nextDiv2.innerHTML.split('<br>');
+                            let answer = answerAndExplanation.shift().replace(/\n/g, '');
+                            let explanation = answerAndExplanation.join('<br>').replace(/\n/g, '');
+                            results.push({
+                                statement: statement,
+                                preContent: preContent,
+                                options: options,
+                                answer: answer,
+                                explanation: explanation
+                            });
+                        }
+                    }
+                }
+
+                let del1 = nextDiv.getElementsByClassName('del1')[0];
+                if (del1) {
+                    let statement = pTags[i].textContent + ' ' + del1.textContent;
+                    let nextP = nextDiv.nextElementSibling;
+                    if (nextP && nextP.tagName.toLowerCase() === 'p') {
+                        let nextDiv2 = nextP.nextElementSibling;
+                        if (nextDiv2 && nextDiv2.tagName.toLowerCase() === 'div' && nextDiv2.classList.contains('collapseomatic_content')) {
+                            let options = nextP.innerHTML.split('<br>').join('<br>').replace(/\n/g, '');
+                            let answerAndExplanation = nextDiv2.innerHTML.split('<br>');
+                            let answer = answerAndExplanation.shift().replace(/\n/g, '');
+                            let explanation = answerAndExplanation.join('<br>').replace(/\n/g, '');
+                            results.push({
+                                statement: statement,
+                                options: options,
+                                answer: answer,
+                                explanation: explanation
+                            });
+                        }
+                    }
                 }
             }
         }
 
-        if (preTags.length > 1) {
-            let preContents = Array.from(preTags).map(pre => pre.innerHTML).join('\n');
-            preContents = `<pre>${preContents}</pre>`;
-            let nextP = nextDiv.nextElementSibling;
-            if (nextP && nextP.tagName.toLowerCase() === 'p') {
-                let nextDiv2 = nextP.nextElementSibling;
-                if (nextDiv2 && nextDiv2.tagName.toLowerCase() === 'div' && nextDiv2.classList.contains('collapseomatic_content')) {
-                    let statement = pTags[i].textContent;
-                    let options = nextP.innerHTML.split('<br>').join('<br>').replace(/\n/g, '');
-                    let answerAndExplanation = nextDiv2.innerHTML.split('<br>');
-                    let answer = answerAndExplanation.shift().replace(/\n/g, '');
-                    let explanation = answerAndExplanation.join('<br>').replace(/\n/g, '');
-                    results.push({
-                        statement: statement,
-                        imgHref: imgHref,
-                        preContent: preContents,
-                        options: options,
-                        answer: answer,
-                        explanation: explanation
-                    });
+        console.log(JSON.stringify(results, null, 2));
+
+        // Generate Anki flashcards
+        function convertToAnkiFormat(flashcards) {
+            let ankiFormat = "";
+            flashcards.forEach((card, index) => {
+                // Front side of the card
+                const front = `${card.statement}<br>${card.imgHref ? `<img src="${card.imgHref}" /><br>` : ''}${card.options}`;
+
+                // Back side of the card
+                const back = `${card.answer}<br>${card.explanation}`;
+
+                ankiFormat += `${front}\t${back}\t\n`;
+                if (index !== flashcards.length - 1) {
+                    ankiFormat += "\n";
                 }
-            }
+            });
+            return ankiFormat;
         }
-        
-        
-
-        let del1 = nextDiv.getElementsByClassName('del1')[0];
-        if (del1) {
-            let statement = pTags[i].textContent + ' ' + del1.textContent;
-            let nextP = nextDiv.nextElementSibling;
-            if (nextP && nextP.tagName.toLowerCase() === 'p') {
-                let nextDiv2 = nextP.nextElementSibling;
-                if (nextDiv2 && nextDiv2.tagName.toLowerCase() === 'div' && nextDiv2.classList.contains('collapseomatic_content')) {
-                    let options = nextP.innerHTML.split('<br>').join('<br>').replace(/\n/g, '');
-                    let answerAndExplanation = nextDiv2.innerHTML.split('<br>');
-                    let answer = answerAndExplanation.shift().replace(/\n/g, '');
-                    let explanation = answerAndExplanation.join('<br>').replace(/\n/g, '');
-                    results.push({
-                        statement: statement,
-                        imgHref: imgHref,
-                        options: options,
-                        answer: answer,
-                        explanation: explanation
-                    });
-                }
-            }
-        }
-    }
-}
-
-console.log(JSON.stringify(results, null, 2));
 
 
-// ... Your existing code to extract the MCQs ...
 
-// Now let's generate the HTML
-let html = `
+
+        // ... Your existing code to extract the MCQs ...
+
+        // Now let's generate the HTML
+        let html = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -208,11 +244,11 @@ let html = `
         // Initialize score counters
         let correctCount = 0;
         let incorrectCount = 0;
-        
+
         // Initialize timer
         let timer = 0;
         let timerElement = document.getElementById('timer');
-        
+
         // Start timer
         setInterval(function() {
             timer++;
@@ -220,7 +256,7 @@ let html = `
             let seconds = timer % 60;
             timerElement.textContent = (minutes < 10 ? '0' : '') + minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
         }, 1000);
-        
+
         window.checkAnswer = function(questionIndex, optionIndex) {
             let options = document.getElementById('options-' + questionIndex).children;
             let answerElement = document.getElementById('answer-' + questionIndex);
@@ -229,7 +265,7 @@ let html = `
                 // Disable all options
                 options[i].classList.add('cursor-not-allowed', 'opacity-50');
                 options[i].setAttribute('onclick', '');
-        
+
                 if (i === optionIndex) {
                     options[i].classList.add('selected');
                     if (answer.includes(options[i].textContent.trim()[0].toLowerCase())) {
@@ -243,7 +279,7 @@ let html = `
                     }
                 }
             }
-        
+
             // Update score counters
             document.getElementById('correct-count').textContent = correctCount;
             document.getElementById('incorrect-count').textContent = incorrectCount;
@@ -252,9 +288,43 @@ let html = `
 </body>
 </html>`;
 
-// Download the file
-let blob = new Blob([html], {type: "text/html;charset=utf-8"});
-let link = document.createElement("a");
-link.href = URL.createObjectURL(blob);
-link.download = "quiz.html";
-link.click();
+        // Download the file
+        let blob = new Blob([html], {
+            type: "text/html;charset=utf-8"
+        });
+        let link = document.createElement("a");
+
+        // Extract the current page title and replace non-alphanumeric characters with underscores
+        const pageTitle = document.title.replace(/[^a-z0-9]/gi, '_');
+        const filename = `${pageTitle}.html`;
+
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+
+
+
+        // Convert flashcards to Anki format
+        const ankiContent = convertToAnkiFormat(results);
+
+        // Create a Blob with the Anki content
+        const blob2 = new Blob([ankiContent], {
+            type: "text/plain"
+        });
+
+
+        // Create a download link for Anki flashcards
+        const ankiDownloadLink2 = document.createElement("a"); 
+        const filename2 = `${pageTitle}.txt`;
+
+
+        ankiDownloadLink2.href = window.URL.createObjectURL(blob2);
+        ankiDownloadLink2.download = filename2;
+        ankiDownloadLink2.click();
+
+
+    }
+
+    // Add an event listener to the button
+    button.addEventListener('click', extractMCQs);
+})();
